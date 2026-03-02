@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8" />
+  <title>NETPHARM Algoritmus</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 40px;
+      background-color: #f5f6f7;
+    }
+    h1 {
+      color: #0a2f66;
+    }
+    .box {
+      background: #eec9e7;
+      border: 2px solid #ccc;
+      padding: 20px;
+      margin-top: 20px;
+      border-radius: 10px;
+    }
+    .recommendation-box {
+      padding: 15px;
+      border-radius: 8px;
+      margin-top: 15px;
+      border: 1px solid #ccc;
+      white-space: pre-wrap;
+    }
+
+    /* místo comorbidities se barvy pro background vybírají přímo podle typu doporučení
+    .frailty, .heart, .renal { background-color: #ffc000; }
+    .hepatic { background-color: #92d050; }*/
+    .avoid { background-color: #f65513; }
+    .caution { background-color: #ffc000; }
+    .possible { background-color: #70ad47; }
+
+    /* není použito
+    .pdf-container {
+      margin-top: 15px;
+    }*/
+
+    select, label, input[type=checkbox] {
+      font-size: 16px;
+    }
+    #logo {
+      height: 4cm;
+      width: 4cm;
+      vertical-align: middle;
+      margin-right: 10px;
+    }
+    #painType {
+      margin-top: 0.25cm;
+    }
+    label[for="painType"], label[for="medication"] {
+      display: block;
+      margin-bottom: 0.25cm;
+    }
+    .references {
+      font-size: 10px;
+      margin-top: 40px;
+      color: #333;
+    }
+    .checkbox-group label {
+      display: block;
+      margin: 5px 0;
+    }
+    @media (max-width: 600px) {
+      body {
+        padding: 15px;
+      }
+      h1 {
+        font-size: 20px;
+      }
+      #logo {
+        height: 2.5cm;
+        width: 2.5cm;
+        display: block;
+        margin: 0 auto 10px;
+      }
+      .box {
+        padding: 15px;
+        font-size: 14px;
+      }
+      select, label {
+        font-size: 14px;
+        width: 100%;
+      }
+    }
+/* ===== Monitoring pill ===== */
+
+.monitoring-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 18px;
+  border-radius: 999px;
+  background-color: #f0f0f0;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.monitoring-pill input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+
+.monitoring-pill:hover {
+  background-color: #e0e0e0;
+}
+
+.monitoring-pill input[type="checkbox"]:checked + span {
+  color: #0a2f66;
+}
+/* ===== Show Recommendations Button ===== */
+
+.recommendation-btn {
+  background-color: #0a2f66;   /* tmavě modrá */
+  color: white;
+  font-size: 16px;
+  font-weight: 600;
+  padding: 12px 22px;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-top: 10px;
+}
+
+.recommendation-btn:hover {
+  background-color: #144a9e;
+  transform: translateY(-1px);
+}
+/* ===== SAFETY LEGEND ===== */
+
+.legend-box {
+  margin-top: 35px;
+  background: #f3f3f3;
+  border: 1px solid #ccc;
+  border-radius: 14px;
+  padding: 18px 20px;
+  max-width: 440px;   /* bylo 480px – zúženo cca o 1 cm */
+}
+
+.legend-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #0a2f66;
+  margin-bottom: 14px;  /* bylo 18px – cca o 1 mm méně */
+}
+
+.legend-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;            /* lehce méně */
+  margin-bottom: 14px;  /* menší vertikální mezera */
+}
+
+.legend-square {
+  width: 0.65cm;
+  height: 0.65cm;
+  border-radius: 10px;
+}
+
+.legend-text {
+  font-size: 18px;
+  font-weight: 600;
+}
+  </style>
+</head>
+<body>
+  <img src="netpharm_logo_znacka.png" id="logo" alt="Logo NETPHARM">
+  <h1>
+CoAN-SAFE ALGORITMUS:<br>
+Optimalizace použití psychotropních koanalgetik u křehkých starších pacientů<br>
+s hepatorenálním a/nebo kardiorenálním syndromem a neuropatickou bolestí
+</h1>
+
+<p><em>
+Klinický algoritmus vytvořený v rámci projektu NETPHARM
+(Nové technologie pro translační výzkum ve farmaceutických vědách).<br> 
+ID projektu CZ.02.01.01/00/22_008/0004607, spolufinancováno Evropskou unií.
+</em></p>
+
+<p>Algoritmus CoAN-SAFE je bezpečnostně orientovaný klinický rozhodovací nástroj pro použití psychotropních koanalgetik u křehkých starších pacientů s neuropatickou bolestí a multimorbiditou (pregabalin, gabapentin, duloxetin, venlafaxin, amitriptylin, karbamazepin). Integruje výběr léčiva podle doporučených postupů s individuálními faktory zranitelnosti pacienta.</p>
+
+<p>Nejprve vyberte typ neuropatické bolesti (pokud je znám). Algoritmus navrhne možnosti 1. a 2. linie podle mezinárodních doporučených postupů. Pokud typ bolesti není znám nebo chcete posoudit konkrétní léčivo (včetně off-label použití), zvolte „Nespecifikováno / off-label použití“ a vyberte léčivo přímo.</p>
+
+<p>Dále vyberte relevantní rizikové domény pacienta (křehkost, renální, jaterní, kardiovaskulární). Algoritmus vygeneruje strukturovaný bezpečnostně zaměřený výstup včetně klíčových rizik, dávkovacích aspektů,<br>
+  a praktického souhrnného doporučení pro klinické použití.</p>
+
+<p>Pro zobrazení podrobných doporučení k monitorování zaškrtněte políčko „Monitoring“. Pro posouzení individuálních faktorů zranitelnosti vašeho pacienta ve vztahu ke zvolenému léčivu zaškrtněte příslušné položky<br>
+  v části „Individuální rizikový profil pacienta“ níže. Každý zvolený faktor je barevně označen podle systému semaforu (červená = raději vyhnout, žlutá = použít s opatrností, zelená = možné použít), což umožňuje rychlou vizuální individualizaci rizik souvisejících s léčivem.</p>
+
+  <div class="box">
+    <label for="painType"><strong>1. Vyberte typ neuropatické bolesti:</strong></label>
+    <select id="painType" onchange="showMedications()">
+      <option value="">-- Vyberte --</option>
+      <option value="diabetic">Diabetická neuropatie</option>
+      <option value="postherpetic">Postherpetická neuralgie</option>
+      <option value="trigeminal">Trigeminní neuralgie</option>
+      <option value="central">Centrální bolest</option>
+      <!-- ✅ NOVÁ VOLBA -->
+      <option value="unspecified">Nespecifikováno / off-label použití</option>
+    </select>
+
+    <div id="medicationsBox" style="margin-top: 0.25cm; display: none;">
+      <label for="medication"><strong>2. Vyberte doporučené léčivo:</strong></label>
+      <select id="medication" onchange="showComorbidities()"></select>
+    </div>
+
+    <div id="comorbidityBox" style="margin-top: 20px; display: none;">
+      <label><strong>3. Vyberte komorbidity nebo stav pacienta:</strong></label><br>
+      <div class="checkbox-group">
+        <label><input type="checkbox" value="renal"> Renální insuficience</label>
+        <label><input type="checkbox" value="hepatic"> Jaterní insuficience</label>
+        <label><input type="checkbox" value="cardiac"> Kardiovaskulární riziko</label>
+        <label><input type="checkbox" value="frailty"> Syndrom křehkosti</label>
+      </div>
+      <button class="recommendation-btn" onclick="showMultipleRecommendations()">
+  Zobrazit doporučení
+</button>
+    </div>
+
+    <div id="recommendation" style="margin-top: 20px;"></div>
+
+   <!-- MONITORING -->
+<div id="monitoringWrapper" style="display:none; margin-top:20px;">
+  <label class="monitoring-pill">
+  <input type="checkbox" id="monitoringCheckbox" onchange="toggleMonitoringBox()">
+  <span>Monitoring</span>
+</label>
+  <div id="monitoringBox"
+       style="display:none;
+              background:#ffffff;
+              border:1px solid #ccc;
+              border-radius:8px;
+              padding:15px;
+              margin-top:10px;
+              color:#000;">
+  </div>
+</div>
+
+  <!-- RISK FACTORS (6 tick boxů) -->
+  <div id="riskFactorsWrapper"
+       style="display:none; margin-top:12px;">
+    <div style="font-weight:700; margin-bottom:8px;">
+4. Individuální rizikový profil pacienta pro vybrané léčivo
+</div>
+
+    <div id="riskFactorsGrid"
+         style="display:grid; grid-template-columns:1fr; gap:8px;">
+    </div>
+  </div>
+  </div>
+
+  <!-- SAFETY CLASSIFICATION LEGEND -->
+<div class="legend-box">
+
+  <div class="legend-title">
+    Klasifikace bezpečnosti (semaforový systém)
+  </div>
+
+  <div class="legend-row">
+    <div class="legend-square" style="background:#f65513;"></div>
+    Raději se vyhnout
+  </div>
+
+  <div class="legend-row">
+    <div class="legend-square" style="background:#ffc000;"></div>
+    Použít s opatrností
+  </div>
+
+  <div class="legend-row">
+    <div class="legend-square" style="background:#70ad47;"></div>
+    Možné použít
+  </div>
+
+</div>
+
+  <div class="references">
+    <strong>Guideline reference (doporučené postupy):</strong><br>
+    EFNS 2010 – Attal N, Cruccu G, Baron R, Haanpää M, Hansson P, Jensen TS, Nurmikko T. EFNS guidelines on the pharmacological treatment of neuropathic pain: 2010 revision. <em>Eur J Neurol.</em> 2010 Sep;17(9):1113-e88. doi:10.1111/j.1468-1331.2010.02999.x. PMID: 20402746.<br><br>
+    NICE CG173 – National Institute for Health and Care Excellence. Neuropathic pain in adults: pharmacological management in non-specialist settings [CG173]. London: NICE; 2013 [updated 2020 Dec]. Available from: https://www.nice.org.uk/guidance/cg173<br><br>
+    CPS 2022 – Mu A, Weinberg E, Moulin DE, Clarke H. Pharmacologic management of chronic neuropathic pain: Review of the Canadian Pain Society consensus statement. <em>Can Fam Physician.</em> 2022 Nov;68(11):844–50.<br><br>
+    AAN 2022 – Price R, Smith D, Franklin GM, Gronseth G, Pignone M, David WS, et al. Oral and topical treatment of painful diabetic polyneuropathy: Practice guideline update summary. <em>Neurology.</em> 2022 Jan 4;98(1):31–43. doi:10.1212/WNL.0000000000013038.<br><br>
+     <strong>Poděkování: </strong> Děkujeme Ing. Pavlu Šebelíkovi za zásadní IT podporu a pomoc s implementací a optimalizací algoritmu.<br><br>
+     <strong>Algoritmus je určen pouze pro nekomerční použití (akademické, vzdělávací a klinické účely).</strong><br><br>
+  </div>
+
+  <script>
+    const drugOptions = {
+      diabetic: [
+        "Amitriptylin (EFNS, NICE, AAN, CPS)",
+        "Duloxetin (EFNS, NICE, AAN, CPS)",
+        "Venlafaxin (EFNS, NICE, AAN, CPS)",
+        "Gabapentin (EFNS, AAN, CPS)",
+        "Pregabalin (EFNS, NICE, AAN, CPS)"
+      ],
+      postherpetic: [
+        "Amitriptylin (EFNS, NICE, CPS)",
+        "Duloxetin (NICE)",
+        "Venlafaxin (NICE)",
+        "Gabapentin (EFNS, CPS)",
+        "Pregabalin (EFNS, NICE, CPS)"
+      ],
+      trigeminal: [
+        "Karbamazepin (EFNS, NICE, CPS)"
+      ],
+      central: [
+        "Amitriptylin (EFNS, NICE)",
+        "Duloxetin (NICE)",
+        "Venlafaxin (NICE)",
+        "Gabapentin (EFNS)",
+        "Pregabalin (EFNS, NICE)"
+      ],
+      /* ✅ Nový blok – všech šest léčiv */
+      unspecified: [
+        "Amitriptylin",
+        "Duloxetin",
+        "Venlafaxin",
+        "Gabapentin",
+        "Pregabalin",
+        "Karbamazepin"
+      ]
+    };
+
+    const recommendations = {
+      amitriptyline: {
+        renal: '<div class="recommendation-box caution"><b>RENÁLNÍ INSUFICIENCE: POUŽÍT S OPATRNOSTÍ.</b><br><b>Rizika:</b> Amitriptylin podléhá rozsáhlému first-pass metabolismu v játrech a vytváří několik aktivních metabolitů před vylučováním močí. Přibližně 12 % až 80 % dávky je eliminováno renálně, převážně ve formě metabolitů. Nejde o nefrotoxické léčivo, avšak retence moči, ortostatická hypotenze a další kardiovaskulární nežádoucí účinky mohou sekundárně přispívat ke zhoršení renálních funkcí.<br><b>Úprava dávky:</b> U pacientů s lehkou až těžkou renální insuficiencí, včetně hemodialýzy, úprava dávky obvykle není nutná; doporučuje se však opatrnost.<br><b>Doporučení:</b><br>Použít s opatrností u pacientů s renální insuficiencí. Pravidelně monitorujte natremii a parametry renálních funkcí, zejména u starších pacientů nebo při současném podávání interagujících léčiv.</div>',
+        hepatic: '<div class="recommendation-box avoid"><b>JATERNÍ INSUFICIENCE: RADĚJI SE VYHNOUT.</b><br><b>Rizika:</b> Amitriptylin je rozsáhle metabolizován v játrech. CYP2D6 je hlavní metabolická dráha, zatímco CYP1A2, CYP2C19 a CYP3A4 jsou minoritní přispěvatelé. Léčivo může způsobit mírné a přechodné zvýšení jaterních enzymů (u 10–12 % pacientů) a vzácně je příčinou klinicky manifestního akutního cholestatického jaterního poškození. Tyto aminotransferázové odchylky jsou obvykle mírné, asymptomatické a přechodné a jen vzácně vedou ke klinicky zjevné cholestatické hepatopatii. Snížená jaterní funkce může vést ke zvýšené expozici léčivu a k vyšší citlivosti na anticholinergní a kardiovaskulární účinky amitriptylinu.<br><b>Úprava dávky:</b> U jaterní insuficience používejte s opatrností, protože clearance je snížena a plazmatické koncentrace jsou zvýšené. U Child-Pugh A nebo B podejte přibližně 50 % obvyklé dávky (dle indikace) s pomalou titrací v malých přírůstcích (např. 5–12,5 mg) každých 1–2 týdny; nepřekračujte 100 mg/den nebo maximální doporučenou dávku (podle toho, co je nižší).<br><b>Doporučení:</b><br>U těžké jaterní insuficience (Child-Pugh C) se amitriptylinu raději vyhněte. U lehké až středně těžké jaterní insuficience (Child-Pugh A nebo B) použijte snížené dávky s pečlivým monitorováním. Při známkách jaterního poškození nebo významném vzestupu enzymů ihned vysaďte.</div>',
+        cardiac: '<div class="recommendation-box avoid"><b>KARDIOVASKULÁRNÍ RIZIKO: RADĚJI SE VYHNOUT.</b><br><b>Rizika:</b> Amitriptylin je tricyklické antidepresivum (TCA), které se metabolizuje na aktivní metabolit nortriptylin, jenž má rovněž anticholinergní a kardiotoxické účinky. Riziko kardiotoxicity (prodloužení QTc a QRS, arytmie a ortostatická hypotenze) je vyšší u pacientů s preexistujícím onemocněním srdce; proto má být používán s opatrností u pacientů s kardiálními komorbiditami. Snížená jaterní či renální funkce může vést ke zvýšené expozici léčivu a vyšší citlivosti na anticholinergní a kardiovaskulární účinky amitriptylinu. CYP2D6 je hlavní jaterní metabolická dráha, zatímco CYP1A2, CYP2C19 a CYP3A4 jsou minoritní dráhy. Silní inhibitory těchto enzymů mohou zvyšovat plazmatické koncentrace a zhoršovat kardiotoxicitu. TCA jsou také vzácně spojována se SIADH a/nebo hyponatrémií, zejména u starších osob, což může dále zhoršit kardiovaskulární stabilitu.<br><b>Úprava dávky:</b> U pacientů se sníženou ejekční frakcí (EF &lt; 40 %) není vyžadována specifická úprava dávky. Dávkování má být podobné jako u geriatrických pacientů. Začněte nejnižší možnou dávkou (25 mg) a titrujte pomalu až do maxima 75 mg u starších pacientů, s ohledem na renální a jaterní funkce i kumulativní CNS a anticholinergní zátěž.<br><b>Doporučení:</b><br>Vyhněte se použití u těžkého srdečního selhání, poruch vedení nebo nestabilního kardiovaskulárního onemocnění. Pokud je léčba nezbytná, zahajte nejnižší možnou dávkou a pečlivě monitorujte EKG, natremii a současně užívanou kardiovaskulární medikaci.</div>',
+        frailty: '<div class="recommendation-box avoid"><b>KŘEHKOST: RADĚJI SE VYHNOUT.</b><br><b>Rizika:</b> U starších osob může amitriptylin vést ke zvýšené expozici a citlivosti na anticholinergní a kardiovaskulární účinky. Jde o CNS-aktivní a anticholinergní léčivo spojené se sedací, závratí, zmateností a hyponatrémií — to vše zvyšuje riziko pádů, deliria a kognitivního poklesu u křehkých starších pacientů. Může také vyvolat SIADH s poklesem natremie a klinickou nestabilitou. Léčivo zvyšuje celkovou anticholinergní a sedativní zátěž při polyfarmakoterapii a může zhoršovat mobilitu či kognitivní poruchy.<br><b>Úprava dávky:</b> Pro křehkost neexistuje specifické dávkování. Začněte nejnižší možnou dávkou (25 mg) a titrujte pomalu až do maxima 75 mg u starších pacientů, s ohledem na renální a jaterní funkce a kumulativní CNS i anticholinergní zátěž.<br><b>Doporučení:</b><br>U křehkých starších pacientů se amitriptylinu pokud možno vyhněte. Je uveden v BEERS, EU(7)-PIM a STOPP kritériích jako potenciálně nevhodné léčivo kvůli silným anticholinergním účinkům, kardiovaskulárním rizikům a sedaci. Zvyšuje riziko pádů, zmatenosti, obstipace a retence moči.</div>'
+      },
+
+      duloxetine: {
+        renal: '<div class="recommendation-box caution"><b>RENÁLNÍ INSUFICIENCE: POUŽÍT S OPATRNOSTÍ.</b><br><b>Rizika:</b> Renální insuficience může měnit farmakokinetiku a vést ke zvýšené expozici mateřské látce i jejím inaktivním metabolitům. Méně než 1 % dávky se vylučuje ledvinami nezměněno a přibližně 70 % se eliminuje renálně ve formě metabolitů. Duloxetin není přímo nefrotoxický, ale může nepřímo ovlivnit renální funkce hemodynamickými změnami nebo kardiovaskulárními nežádoucími účinky. Snížená clearance u CKD zvyšuje riziko kumulace, ortostatické hypotenze a dalších dávkově závislých NÚ. Léčivo může způsobit hyponatrémii nebo SIADH, zejména u starších osob nebo v kombinaci s dalšími serotonergními léčivy.<br><b>Úprava dávky:</b> U lehké až středně těžké renální insuficience (CrCl > 30 ml/min) obvykle není nutná úprava dávky, doporučuje se však nízká iniciační dávka. U těžké renální insuficience (CKD G4–G5, CrCl ≤ 30 ml/min) se duloxetin nedoporučuje. Pokud se zvažuje léčba při CrCl kolem 30 ml/min, někteří odborníci doporučují zahájit 30 mg 1× denně a titrovat pomalu, nepřekračovat 60 mg/den.<br><b>Doporučení:</b><br>Použít s opatrností u renální insuficience. Vyhnout se duloxetinu při CrCl ≤ 30 ml/min. Pravidelně monitorujte renální funkce a natremii, zejména u starších pacientů nebo při současném podávání interagujících léčiv.</div>',
+        hepatic: '<div class="recommendation-box avoid"><b>JATERNÍ INSUFICIENCE: RADĚJI SE VYHNOUT.</b><br><b>Rizika:</b> Duloxetin se rozsáhle metabolizuje v játrech přes hlavní enzymy CYP2D6 a CYP1A2, což vyžaduje opatrnost u pacientů s jaterní insuficiencí. Genetické polymorfismy CYP2D6 mohou přispívat k interindividuální variabilitě metabolismu. Ve vyšších dávkách duloxetin inhibuje CYP2D6 a CYP2B6, což může ovlivnit metabolismus dalších léčiv využívajících tyto dráhy. Zvýšení jaterních enzymů se objevuje u méně než 1 % pacientů a bývá mírné a přechodné, vzácně vyžaduje úpravu dávky nebo vysazení. Byly však hlášeny vzácné případy klinicky zjevného jaterního poškození s výraznou elevací enzymů, s ikterem i bez ikteru.<br><b>Úprava dávky:</b> Duloxetin je třeba u jaterní insuficience vynechat. Pokud je léčba v mírné insuficienci (Child-Pugh A) považována za nezbytnou, zahajte dávkou ≤30 mg 1× denně a titrujte velmi pomalu (ne častěji než každé 2–4 týdny) s pečlivým sledováním NÚ. Nepřekračujte 30 mg/den.<br><b>Doporučení:</b><br>Vyhnout se duloxetinu u jaterní insuficience (Child-Pugh A až C). Při známkách jaterního poškození nebo významném vzestupu enzymů léčbu okamžitě ukončete.</div>',
+        cardiac: '<div class="recommendation-box caution"><b>KARDIOVASKULÁRNÍ RIZIKO: POUŽÍT S OPATRNOSTÍ.</b><br><b>Rizika:</b> Duloxetin může zhoršit nebo vyvolat SIADH či hyponatrémii, což může dále kompromitovat kardiovaskulární stabilitu. SNRI mohou být kardiotoxická (prodloužení QTc, arytmie, ortostatická hypotenze) a představovat riziko u pacientů s preexistujícím onemocněním srdce. Kardiovaskulární účinky je nutné pečlivě zvážit. Riziko hypertenze indukované duloxetinem se u starších osob jeví jako nízké, nicméně riziko ortostatické hypotenze a SIADH s věkem roste. Renální a jaterní insuficience mohou snižovat clearance a zvyšovat kumulaci, čímž zhoršují kardiovaskulární NÚ. CYP2D6 je hlavní jaterní dráha; silní inhibitory a pomalí metabolizátoři mohou mít vyšší plazmatické koncentrace a vyšší riziko kardiotoxicity.<br><b>Úprava dávky:</b> U pacientů se sníženou EF < 40 % není vyžadována specifická úprava dávky. Dávkování má následovat doporučení pro geriatrické pacienty. Doporučují se nízké iniciační dávky (např. 20 mg/den) a nižší udržovací dávky (např. 30–60 mg/den) u křehkých nebo komorbidních pacientů. Titrace pomalu a sledovat toleranci.<br><b>Doporučení:</b><br>Léčiva zvyšující noradrenalin (např. SNRI) mohou být škodlivá u osob s nestabilním či pokročilým srdečním selháním nebo významným kardiovaskulárním onemocněním. Duloxetin používejte s opatrností, zejména u starších pacientů se srdečními komorbiditami. Je-li léčba nutná, začněte nejnižší účinnou dávkou a pečlivě monitorujte EKG, natremii a interagující kardiovaskulární medikaci.</div>',
+        frailty: '<div class="recommendation-box caution"><b>KŘEHKOST: POUŽÍT S OPATRNOSTÍ.</b><br><b>Rizika:</b> Duloxetin může zhoršit nebo vyvolat SIADH či hyponatrémii, což vede k nestabilitě, pádům, deliriu a kognitivnímu poklesu u křehkých starších osob. Novější data naznačují, že SNRI mohou zvyšovat riziko pádů. U starších žen může být eliminační poločas až o 25 % delší. Renální insuficience může dále měnit dispozici a zvyšovat expozici.<br><b>Úprava dávky:</b> Neexistuje specifické dávkování pro křehkost. Obvyklá počáteční dávka je 60 mg 1× denně; u křehkých/senzitivních pacientů může být vhodná nižší iniciační dávka (např. 30 mg/den) pro lepší toleranci. Maximální dávka je 120 mg/den podle tolerance, vyšší dávky však neprokázaly další přínos. Při CrCl &lt; 30 ml/min se duloxetin nemá používat. U geriatrických/komorbidních pacientů se doporučují iniciační dávky 20–30 mg/den a udržovací dávky 30–60 mg/den. Titrace pomalu a sledovat NÚ.<br><b>Doporučení:</b><br>Duloxetin je v BEERS 2023 uveden jako potenciálně nevhodné léčivo kvůli riziku SIADH a pádů a ve STOPPFall 2021 pro zvýšené riziko pádů. Ačkoli EU(7)-PIM duloxetin neuvádí, je vhodná opatrnost u pacientů s anamnézou pádů, posturální hypotenzí nebo rizikem hyponatrémie. Duloxetin lze zvažovat jako START léčivo u starších pacientů se středně těžkou až těžkou neuropatickou bolestí, pokud jsou jiné 1. linie (např. topika, gabapentinoidy) neúčinné nebo netolerované.</div>'
+      },
+
+      venlafaxine: {
+        renal: '<div class="recommendation-box caution"><b>RENÁLNÍ INSUFICIENCE: POUŽÍT S OPATRNOSTÍ.</b><br><b>Rizika:</b> Venlafaxin a jeho metabolity jsou primárně eliminovány ledvinami; pouze asi 5 % mateřské látky se vylučuje nezměněno. Přibližně 87 % dávky je eliminováno renálně během 48 hodin. Nejde o přímo nefrotoxické léčivo, ale může nepřímo ovlivnit renální funkce kardiovaskulárními a hemodynamickými změnami.<br><b>Úprava dávky:</b> U lehké až středně těžké renální insuficience (CrCl > 30 ml/min) obvykle není nutná úprava dávky. U těžké renální insuficience (CKD G4–G5, CrCl ≤ 30 ml/min) a hemodialýzy (HD) se doporučuje počáteční dávka 37,5 mg 1× denně s opatrnou titrací, přičemž se nemá překročit více než 50 % maximální doporučené dávky.<br><b>Doporučení:</b><br>Použít s opatrností u renální insuficience. U těžké renální insuficience je doporučena redukce dávky. Pravidelně kontrolujte natremii a renální funkce, zejména u starších pacientů nebo při současném podávání interagujících léčiv.</div>',
+        hepatic: '<div class="recommendation-box avoid"><b>JATERNÍ INSUFICIENCE: RADĚJI SE VYHNOUT.</b><br><b>Rizika:</b> Venlafaxin je rozsáhle metabolizován v játrech, převážně přes cytochrom P450 2D6. Tato dráha je klinicky významná z hlediska interakcí a může být ovlivněna genetickými polymorfismy CYP2D6 a CYP2C19. Byly hlášeny vzácné případy klinicky manifestního jaterního poškození. Mírné zvýšení jaterních enzymů se objevuje u méně než 1 % pacientů a bývá přechodné, obvykle bez potřeby úpravy dávky nebo vysazení.<br><b>Úprava dávky:</b> U jaterní insuficience používejte s opatrností, protože clearance je snížena a plazmatické koncentrace jsou zvýšené. U Child-Pugh A nebo B snižte obvyklou dávku přibližně o 50 %. U Child-Pugh C se použití nedoporučuje nebo zvažte ještě větší redukci s pečlivým monitorováním.<br><b>Doporučení:</b><br>U těžké jaterní insuficience (Child-Pugh C) se venlafaxinu raději vyhněte. U lehké až středně těžké jaterní insuficience (Child-Pugh A nebo B) použijte přibližně 50 % standardní dávky (dle indikace) s pečlivým sledováním. Při známkách jaterního poškození nebo významném vzestupu enzymů ihned vysaďte.</div>',
+        cardiac: '<div class="recommendation-box caution"><b>KARDIOVASKULÁRNÍ RIZIKO: POUŽÍT S OPATRNOSTÍ.</b><br><b>Rizika:</b> Venlafaxin může zhoršit nebo vyvolat SIADH či hyponatrémii, což může kompromitovat kardiovaskulární stabilitu. SNRI mohou zvyšovat krevní tlak a představovat riziko u pacientů s preexistujícím onemocněním srdce. Ačkoli je hypertenze indukovaná venlafaxinem u starších osob relativně méně častá, ortostatická hypotenze se vyskytuje častěji. Renální insuficience může snižovat clearance venlafaxinu, vést ke kumulaci a zesílit kardiovaskulární NÚ. Potenciál kardiotoxicity (QTc prolongace, arytmie, ortostatická hypotenze) je vyšší u pacientů s kardiálními komorbiditami. CYP2D6 je primární jaterní dráha; silní inhibitory i pomalí metabolizátoři mohou mít vyšší koncentrace a vyšší riziko kardiotoxicity.<br><b>Úprava dávky:</b> U pacientů se sníženou EF &lt; 40 % není vyžadována specifická úprava dávky. Obvykle je vhodné stejné dávkování jako u geriatrických pacientů. U IR forem začněte 25–50 mg 2× denně a zvyšujte o 25 mg na dávku dle tolerance. U XR forem začněte 37,5 mg 1× denně a zvyšujte o 37,5 mg každé 4–7 dní dle tolerance.<br><b>Doporučení:</b><br>Venlafaxin používejte s opatrností u pacientů s nestabilním či pokročilým srdečním selháním nebo jiným významným kardiovaskulárním onemocněním. Je-li léčba nutná, zahajte nejnižší možnou dávkou a pečlivě monitorujte EKG, natremii a interagující kardiovaskulární medikaci.</div>',
+        frailty: '<div class="recommendation-box caution"><b>KŘEHKOST: POUŽÍT S OPATRNOSTÍ.</b><br><b>Rizika:</b> Venlafaxin může zhoršit nebo vyvolat SIADH či hyponatrémii, což vede k nestabilitě, pádům, deliriu a kognitivnímu poklesu u křehkých starších osob. Novější data naznačují, že SNRI mohou zvyšovat riziko pádů. U starších pacientů může snížená renální clearance vést ke kumulaci a vyššímu riziku NÚ.<br><b>Úprava dávky:</b> U IR forem začněte 25–50 mg 2× denně a zvyšujte o 25 mg na dávku dle tolerance. U XR forem začněte 37,5 mg 1× denně a zvyšujte o 37,5 mg každé 4–7 dní. Snižte celkovou denní dávku o 25–50 % u lehké až středně těžké renální insuficience. Sledujte NÚ a titrujte pomalu s ohledem na renální funkce. Pro křehkost neexistují specifická dávkovací doporučení.<br><b>Doporučení:</b><br>Venlafaxin je v BEERS 2023 uveden jako potenciálně nevhodné léčivo kvůli riziku SIADH a pádů a ve STOPPFall 2021 pro zvýšené riziko pádů. Je také v EU(7)-PIM seznamu pro asociaci s vyšší mírou nežádoucích dopadů, včetně pádů a fraktur. U křehkých starších osob používejte s opatrností a zvažte bezpečnější alternativy. Je-li léčba nutná, monitorujte hyponatrémii a ortostatické příznaky a používejte nejnižší účinnou dávku.</div>'
+      },
+
+      gabapentin: {
+        renal: '<div class="recommendation-box caution"><b>RENÁLNÍ INSUFICIENCE: POUŽÍT S OPATRNOSTÍ.</b><br><b>Rizika:</b> Riziko předávkování v důsledku kumulace léčiva. Vyšší pravděpodobnost sedace, závratí a ataxie, zejména u starších osob nebo v kombinaci s dalšími CNS tlumivými látkami.<br><b>Úprava dávky:</b><br>eGFR &ge;80 ml/min: denní dávka 900–3600 mg (ve 3 denních dávkách),<br>eGFR 50–79 ml/min: 600–1800 mg/den (ve 3 denních dávkách),<br>eGFR 30–49 ml/min: 300–900 mg/den (ve 3 denních dávkách),<br>eGFR 15–29 ml/min: 150 mg obden – 600 mg/den (ve 3 denních dávkách),<br>eGFR &lt;15 ml/min: 150 mg obden – 300 mg/den; snižte denní dávku úměrně kreatininové clearance.<br>U anurických pacientů na hemodialýze se doporučuje úvodní dávka 300–400 mg/den, následovaná 200 až 300 mg gabapentinu po každých 4 hodinách dialýzy. Ve dnech bez dialýzy se gabapentin nemá podávat.<br><b>Doporučení:</b><br>Gabapentin lze podat za předpokladu pečlivého monitorování renálních funkcí a odpovídajících úprav dávky, zejména pokud je eGFR pod 60 ml/min. Používejte s opatrností u pacientů s nestabilní nebo progresivně klesající funkcí ledvin, akutním poškozením ledvin a nefrotickým syndromem.</div>',
+        hepatic: '<div class="recommendation-box possible"><b>JATERNÍ INSUFICIENCE: MOŽNÉ POUŽÍT.</b><br><b>Rizika:</b> Gabapentin podléhá minimálnímu jaternímu metabolismu a je obecně bezpečný u jaterní insuficience. Klinicky významná hepatotoxicita je vzácná. U pokročilé cirhózy nebo hepatorenálního syndromu může docházet k mírné CNS či respirační depresi, zejména v kombinaci s dalšími sedativy.<br><b>Úprava dávky:</b> U lehké až těžké jaterní insuficience (Child-Pugh A–C) není úprava dávky nutná. U hepatorenálního syndromu nebo při současné renální dysfunkci postupujte podle doporučení pro renální úpravu dávky.<br><b>Doporučení:</b><br>U jaterní insuficience je možné použít. U pokročilé cirhózy nebo při riziku sedace začněte nízkou dávkou (100 mg/den) a postupně zvyšujte. Vyhněte se kombinaci se silnými CNS tlumivými látkami. Gabapentin může být preferován jako doplňkové analgetikum pro neuropatickou bolest u pacientů se stabilní cirhózou a normální renální funkcí.</div>',
+        cardiac: '<div class="recommendation-box caution"><b>KARDIOVASKULÁRNÍ RIZIKO: POUŽÍT S OPATRNOSTÍ.</b><br><b>Rizika:</b> Gabapentin může způsobit retenci tekutin ovlivněním myogenního tonu arteriol, což může zhoršit srdeční selhání, zvýšit kardiovaskulární riziko a zvýšit pravděpodobnost příhod, jako je infarkt myokardu, tromboembolická příhoda nebo cévní mozková příhoda. Riziko je vyšší u pacientů s preexistujícím srdečním selháním, CKD nebo cirhózou.<br><b>Úprava dávky:</b> U kardiálního postižení není nutná specifická úprava dávky. Pokud je přítomna CKD, upravte dávku podle renálních funkcí.<br><b>Doporučení:</b><br>Používejte s opatrností u pacientů se srdečním selháním nebo rizikem objemového přetížení. Použijte nejnižší účinnou dávku a revidujte léčbu při rozvoji edémů nebo dušnosti. Gabapentin může být bezpečnější alternativou k pregabalinu u pacientů s kardiovaskulárními rizikovými faktory, protože dostupná data naznačují nižší riziko dekompenzace.</div>',
+        frailty: '<div class="recommendation-box caution"><b>KŘEHKOST: POUŽÍT S OPATRNOSTÍ.</b><br><b>Rizika:</b> Gabapentin je CNS-aktivní léčivo spojené se sedací, závratí a zvýšeným rizikem pádů, zejména u křehkých starších osob. Riziko se zvyšuje při současném podávání s dalšími CNS tlumivými látkami (antidepresiva, antipsychotika, benzodiazepiny, opioidy, myorelaxancia), což zvyšuje pravděpodobnost pádů, fraktur a kognitivního zhoršení.<br><b>Úprava dávky:</b> Pro křehkost není nutná specifická úprava dávky, ale začněte nejnižší účinnou dávkou a titrujte pomalu s ohledem na renální funkce a kumulativní CNS zátěž.<br><b>Doporučení:</b><br>U křehkých starších osob používejte s opatrností. Je uveden ve STOPPFall 2021 jako CNS-aktivní medikace zvyšující riziko pádů a v Beers 2023 jako interagující s opioidy kvůli riziku těžké sedace a respirační deprese. Vyhněte se kombinaci tří a více CNS-aktivních léčiv a přehodnoťte off-label použití mimo neuropatickou bolest.</div>'
+      },
+
+      pregabalin: {
+        renal: '<div class="recommendation-box caution"><b>RENÁLNÍ INSUFICIENCE: POUŽÍT S OPATRNOSTÍ.</b><br><b>Rizika:</b> Riziko předávkování v důsledku kumulace léčiva. Vyšší pravděpodobnost sedace, závratí a ataxie, zejména u starších osob nebo v kombinaci s dalšími CNS tlumivými látkami.<br><b>Úprava dávky:</b><br>eGFR &ge;60 ml/min: 150–600 mg/den (ve 2–3 dělených dávkách),<br>eGFR 30–59 ml/min: 75–300 mg/den (ve 2–3 dělených dávkách),<br>eGFR 15–29 ml/min: 25–150 mg/den (v 1–2 denních dávkách),<br>eGFR &lt;15 ml/min: 25–75 mg/den (1× denně).<br>U anurických pacientů na hemodialýze je pregabalin přibližně z 50 % dialyzovatelný; po každé dialýze se doporučuje dodatečná dávka.<br><b>Doporučení:</b><br>Pregabalin podávejte s úpravami dávky podle renálních funkcí, zejména pokud je eGFR pod 60 ml/min. Používejte opatrně u pacientů s nestabilní nebo progresivně klesající renální funkcí a ukončete léčbu při významných NÚ.</div>',
+        hepatic: '<div class="recommendation-box possible"><b>JATERNÍ INSUFICIENCE: MOŽNÉ POUŽÍT.</b><br><b>Rizika:</b> Pregabalin podléhá minimálnímu jaternímu metabolismu a je primárně eliminován ledvinami nezměněn. Klinicky relevantní hepatotoxicita je vzácná. U pokročilého jaterního onemocnění nebo hepatorenálního syndromu může docházet k mírné CNS či respirační depresi, zejména při kombinaci s dalšími CNS tlumivými látkami.<br><b>Úprava dávky:</b> U lehké až těžké jaterní insuficience (Child-Pugh A–C) není úprava dávky nutná. U hepatorenálního syndromu nebo při renální dysfunkci postupujte dle renálních doporučení pro úpravu dávky.<br><b>Doporučení:</b><br>U jaterní insuficience je možné použít. U pokročilé cirhózy nebo při riziku sedace zahajte nízkou dávkou (např. 50 mg denně) a titrujte pomalu. Vyhněte se současnému podávání se silnými CNS tlumivými látkami. Pregabalin může být zvažován jako preferované koanalgetikum pro neuropatickou bolest u pacientů se stabilní cirhózou a zachovanou renální funkcí.</div>',
+        cardiac: '<div class="recommendation-box caution"><b>KARDIOVASKULÁRNÍ RIZIKO: POUŽÍT S OPATRNOSTÍ.</b><br><b>Rizika:</b> Pregabalin může způsobit retenci tekutin změnou myogenního tonu arteriol, což může vést k dekompenzaci srdečního selhání, zvýšení kardiovaskulárního rizika a vyššímu výskytu infarktu myokardu, tromboembolických příhod a CMP. Pacienti s preexistujícím srdečním selháním, CKD nebo cirhózou jsou zvláště ohroženi.<br><b>Úprava dávky:</b> U srdečního selhání není vyžadována specifická úprava dávky. Při současné renální dysfunkci se řiďte doporučeními pro renální úpravu dávky.<br><b>Doporučení:</b><br>Používejte s opatrností u pacientů se srdečním selháním nebo retencí tekutin. Zahajte nejnižší účinnou dávkou a přehodnoťte léčbu při rozvoji edému nebo dušnosti. Ačkoli gabapentin i pregabalin sdílejí toto riziko, některé důkazy naznačují, že gabapentin může být spojen s nižším kardiovaskulárním rizikem a může být proto preferován u pacientů s preexistujícím srdečním selháním nebo vysokým kardiovaskulárním rizikem.</div>',
+        frailty: '<div class="recommendation-box caution"><b>KŘEHKOST: POUŽÍT S OPATRNOSTÍ.</b><br><b>Rizika:</b> Pregabalin je CNS-aktivní léčivo spojené se sedací, závratí a zvýšeným rizikem pádů, zejména u křehkých starších osob. Současné podávání s dalšími CNS tlumivými látkami (sedativní antidepresiva, antipsychotika, benzodiazepiny, opioidy, myorelaxancia) dále zvyšuje pravděpodobnost pádů, fraktur a kognitivního poklesu.<br><b>Úprava dávky:</b> Pro křehkost neexistuje specifická úprava dávky. Použijte nejnižší účinnou dávku a titrujte pomalu s ohledem na renální funkce a celkovou CNS zátěž.<br><b>Doporučení:</b><br>U křehkých starších osob používejte s opatrností. Je uveden ve STOPPFall 2021 jako CNS-aktivní léčivo zvyšující riziko pádů a v Beers 2023 jako interagující s opioidy kvůli riziku těžké sedace nebo respirační deprese. Vyhněte se kombinaci tří a více CNS-aktivních léčiv a přehodnoťte off-label použití mimo neuropatickou bolest.</div>'
+      },
+
+      carbamazepine: {
+        renal: '<div class="recommendation-box caution"><b>RENÁLNÍ INSUFICIENCE: POUŽÍT S OPATRNOSTÍ.</b><br><b>Rizika:</b> Karbamazepin byl spojován s hyponatrémií a SIADH, s incidencí od 1,8 % do 40 %. Většina případů je mírná, avšak starší pacienti jsou zvláště zranitelní, zejména při užívání diuretik nebo SSRI. Byly také popsány vzácné, ale závažné renální komplikace (tubulointersticiální nefritida, akutní renální selhání, albuminurie).<br><b>Úprava dávky:</b> U renální insuficience, včetně hemodialýzy, obvykle není nutná úvodní úprava dávky. Nicméně může docházet ke kumulaci aktivního metabolitu 10,11-epoxidu — doporučuje se terapeutické monitorování léčiva (TDM).<br><b>Doporučení:</b><br>Použít s opatrností u renální insuficience. Pravidelně kontrolujte natremii a renální parametry, zejména u starších pacientů nebo při současném podávání interagujících léčiv. Zvažte alternativy, pokud se rozvine významná hyponatrémie nebo dojde ke zhoršení renálních funkcí.</div>',
+        hepatic: '<div class="recommendation-box avoid"><b>JATERNÍ INSUFICIENCE: RADĚJI SE VYHNOUT.</b><br><b>Rizika:</b> Karbamazepin je rozsáhle metabolizován v játrech a může způsobit přechodné nebo přetrvávající zvýšení jaterních enzymů. Vzácně může vyvolat klinicky významnou hepatotoxicitu (cholestatické nebo hepatocelulární poškození, granulomatózní hepatitida, jaterní selhání nebo DRESS). U jaterní insuficience může snížený metabolismus vést ke kumulaci léčiva i metabolitů a zvýšit riziko toxicity.<br><b>Úprava dávky:</b> Začněte nejnižší dávkou (100 mg/den) a zvyšujte opatrně. Monitorujte sérové koncentrace karbamazepinu a aktivního metabolitu 10,11-epoxidu pro posouzení kumulace a toxicity.<br><b>Doporučení:</b><br>U středně těžké až těžké jaterní insuficience se raději vyhnout. Pokud dojde k progresi (např. z Child-Pugh A na B), pečlivě sledujte a zvažte změnu na alternativu. Při záchytu jaterního poškození nebo významné elevace enzymů ihned vysaďte.</div>',
+        cardiac: '<div class="recommendation-box avoid"><b>KARDIOVASKULÁRNÍ RIZIKO: RADĚJI SE VYHNOUT.</b><br><b>Rizika:</b> Karbamazepin má membránově stabilizující účinky, které mohou vyvolat bradykardii, AV blok, hypotenzi a vzácně dekompenzaci srdečního selhání. Hyponatrémie v důsledku SIADH může dále zhoršit kardiovaskulární stabilitu. Karbamazepin indukuje CYP3A4, UGT a P-gp, což může snižovat plazmatické koncentrace a účinnost kardiovaskulárních léčiv (např. betablokátorů, blokátorů kalciových kanálů, antikoagulancií).<br><b>Úprava dávky:</b> U mírného kardiálního postižení není specifická úprava dávky nutná, titrace má být pomalá a dle tolerance. TDM může být přínosné u pacientů se sníženým srdečním výdejem nebo při více interakcích.<br><b>Doporučení:</b><br>U středně těžkého až těžkého srdečního selhání, poruch vedení nebo nestabilního kardiovaskulárního onemocnění se raději vyhnout. Je-li léčba nezbytná, začněte nejnižší dávkou (100 mg/den) a pečlivě monitorujte EKG, natremii a interagující kardiovaskulární léčiva.</div>',
+        frailty: '<div class="recommendation-box avoid"><b>KŘEHKOST: RADĚJI SE VYHNOUT.</b><br><b>Rizika:</b> Karbamazepin je CNS-aktivní a anticholinergní léčivo spojené se sedací, závratí, zmateností a hyponatrémií, což zvyšuje riziko pádů, deliria a kognitivního poklesu u křehkých starších osob. Může způsobit SIADH a pokles natremie s klinickou nestabilitou. Přispívá ke kumulativní anticholinergní a sedativní zátěži při polyfarmakoterapii a může zhoršovat mobilitu či kognici.<br><b>Úprava dávky:</b> Pro křehkost není specifická úprava dávky. Začněte nejnižší účinnou dávkou (100 mg/den) a titrujte pomalu s ohledem na renální a jaterní funkce a kumulativní CNS i anticholinergní zátěž.<br><b>Doporučení:</b><br>U křehkých starších osob se raději vyhnout kvůli vysokému riziku sedace, pádů a hyponatrémie. Uveden v Beers 2023 jako potenciálně nevhodný kvůli SIADH a ve STOPPFall 2021 jako CNS-aktivní léčivo zvyšující riziko pádů. EU(7)-PIM zmiňuje riziko zmatenosti, agitovanosti, bradykardie a anticholinergních účinků. Preferujte bezpečnější alternativy (např. gabapentin nebo lamotrigin), pokud je to možné.</div>'
+      }
+    };
+
+    function showMedications() {
+      const painType = document.getElementById('painType').value;
+      const medicationBox = document.getElementById('medicationsBox');
+      const medicationSelect = document.getElementById('medication');
+      const comorbidityBox = document.getElementById('comorbidityBox');
+      const recommendation = document.getElementById('recommendation');
+
+      // reset
+      medicationSelect.innerHTML = '<option value="">-- Vyberte --</option>';
+      recommendation.innerHTML = '';
+      comorbidityBox.style.display = 'none';
+
+      if (painType && drugOptions[painType]) {
+        drugOptions[painType].forEach(drug => {
+          const option = document.createElement('option');
+          option.textContent = drug;
+          option.value = drug.split(' ')[0].toLowerCase();
+          medicationSelect.appendChild(option);
+        });
+        medicationBox.style.display = 'block';
+      } else {
+        medicationBox.style.display = 'none';
+      }
+    }
+
+    function showComorbidities() {
+      document.getElementById('comorbidityBox').style.display = 'block';
+      document.getElementById('recommendation').innerHTML = '';
+      updateMonitoringUI();
+    }
+
+    function showMultipleRecommendations() {
+      const selectedMed = document.getElementById('medication').value;
+      const checkboxes = document.querySelectorAll('.checkbox-group input[type="checkbox"]');
+      const recommendationBox = document.getElementById('recommendation');
+      let result = '';
+
+      checkboxes.forEach(checkbox => {
+        if (checkbox.checked &&
+            recommendations[selectedMed] &&
+            recommendations[selectedMed][checkbox.value]) {
+          result += recommendations[selectedMed][checkbox.value];
+        }
+      });
+
+      recommendationBox.innerHTML =
+        result || '<div class="recommendation-box">Pro tuto kombinaci není dostupné žádné doporučení.</div>';
+
+      updateMonitoringUI();
+    }
+
+  /* ===== MONITORING CODE ZAČÍNÁ TADY ===== */
+
+  const monitoringTexts = {
+    venlafaxine: `
+<strong>Monitorování rizik:</strong><br><br>
+• Monitorujte krevní tlak, tepovou frekvenci, EKG a natremii při zahájení a v pravidelných intervalech (nejvyšší riziko SIADH v prvních 2–4 týdnech po nasazení).<br>
+• Monitorujte renální funkce a sledujte známky retence tekutin, ortostatické hypotenze nebo kumulace léčiva.<br>
+• Hodnoťte závratě, synkopy, periferní edémy, sedaci, zmatenost, poruchy chůze, pády a kognitivní změny, zejména při zahájení léčby nebo úpravách dávky.<br>
+• Pravidelně revidujte současnou medikaci z hlediska farmakokinetických interakcí, zejména přes CYP2D6.<br>
+• Zvažte genotypizaci CYP2D6, pokud je klinicky relevantní.<br>
+• Sledujte známky krvácení u pacientů se zvýšeným krvácivým rizikem, zejména při současném podávání NSAID nebo antikoagulační léčby.<br>
+• Zvažte terapeutické monitorování léčiva (TDM) při vysokých dávkách nebo u pacientů se zvýšenou klinickou zranitelností.
+`,
+
+    duloxetine: `
+<strong>Monitorování rizik:</strong><br><br>
+• Monitorujte krevní tlak a tepovou frekvenci při zahájení a pravidelně během léčby, zejména při nasazení a změnách dávky.<br>
+• Monitorujte natremii (riziko SIADH a hyponatrémie).<br>
+• Monitorujte renální funkce u pacientů s CKD nebo sníženou kreatininovou clearance.<br>
+• Monitorujte jaterní testy a sledujte známky jaterního poškození (např. ikterus, bolest břicha, vyrážka, horečka).<br>
+• Hodnoťte závratě, synkopy, sedaci, zmatenost, poruchy chůze, pády a celkové funkční zhoršení.<br>
+• Sledujte ortostatickou hypotenzi, zejména u starších osob.<br>
+• Monitorujte krvácivé riziko, zejména při kombinaci s NSAID nebo antikoagulancii.<br>
+• Revidujte současnou medikaci z hlediska klinicky významných lékových interakcí (střední inhibice CYP2D6).<br>
+• Zvažte genotypizaci CYP2D6 a terapeutické monitorování léčiva (TDM), pokud je to klinicky vhodné.
+`,
+
+    carbamazepine: `
+<strong>Monitorování rizik:</strong><br><br>
+• Monitorujte natremii při zahájení a pravidelně (riziko SIADH a hyponatrémie).<br>
+• Monitorujte krevní obraz (riziko leukopenie, agranulocytózy, trombocytopenie).<br>
+• Monitorujte jaterní testy při zahájení a periodicky během léčby.<br>
+• Monitorujte renální funkce, zejména u starších pacientů nebo při komorbiditách.<br>
+• Monitorujte krevní tlak, tepovou frekvenci a EKG (riziko poruch vedení a bradykardie).<br>
+• Hodnoťte závratě, sedaci, zmatenost, poruchy chůze a pády.<br>
+• Sledujte nově vzniklou vyrážku, zejména v prvních týdnech (riziko SJS/TEN).<br>
+• Pravidelně revidujte současnou medikaci kvůli silné indukci CYP3A4 a interakčnímu potenciálu.<br>
+• Zvažte terapeutické monitorování léčiva (TDM), včetně sledování aktivního metabolitu (10,11-epoxid).
+`,
+
+    gabapentin: `
+<strong>Monitorování rizik:</strong><br><br>
+• Sledujte sedaci, závratě, poruchy rovnováhy, zmatenost, poruchy chůze a pády, zejména při zahájení léčby nebo zvyšování dávky.<br>
+• Pravidelně hodnotťe renální funkce a upravujte dávku (riziko kumulace u CKD).<br>
+• Sledujte periferní edémy, přírůstek hmotnosti a známky objemového přetížení (např. dušnost, zhoršení srdečního selhání).<br>
+• Sledujte známky útlumu CNS, zejména při kombinaci s opioidy, benzodiazepiny, antidepresivy nebo jinými CNS-aktivními léčivy.<br>
+• Hodnoťte retenci moči nebo obtíže s močením, zejména u křehkých pacientů.<br>
+• Pravidelně revidujte současnou medikaci pro minimalizaci aditivního CNS a pádového rizika.<br>
+• Zvažte terapeutické monitorování léčiva (TDM) u pacientů s renální insuficiencí nebo při nevysvětlené toxicitě.
+`,
+
+    pregabalin: `
+<strong>Monitorování rizik:</strong><br><br>
+• Sledujte sedaci, závratě, poruchy rovnováhy, zmatenost, poruchy chůze a pády, zejména při zahájení léčby nebo zvyšování dávky.<br>
+• Pravidelně hodnotťe renální funkce a upravujte dávku (riziko kumulace u CKD).<br>
+• Sledujte periferní edémy, přírůstek hmotnosti a známky objemového přetížení (např. dušnost, zhoršení srdečního selhání).<br>
+• Sledujte známky útlumu CNS, zejména při kombinaci s opioidy, benzodiazepiny, antidepresivy nebo jinými CNS-aktivními léčivy.<br>
+• Hodnoťte retenci moči nebo obtíže s močením, zejména u křehkých pacientů.<br>
+• Pravidelně revidujte současnou medikaci pro minimalizaci aditivního CNS a pádového rizika.<br>
+• Zvažte terapeutické monitorování léčiva (TDM) u pacientů s renální insuficiencí nebo při nevysvětlené toxicitě.
+`,
+
+    amitriptyline: `
+<strong>Monitorování rizik:</strong><br><br>
+• Monitorujte renální funkce při zahájení a pravidelně během léčby, zejména při nasazení a úpravách dávky.<br>
+• Monitorujte jaterní enzymy při zahájení a pravidelně během léčby.<br>
+• Monitorujte krevní tlak a tepovou frekvenci (riziko ortostatické hypotenze, kardiovaskulární nestability).<br>
+• Provádějte EKG monitorování (riziko prodloužení QTc/QRS a arytmií).<br>
+• Monitorujte natremii (riziko SIADH a hyponatrémie).<br>
+• Sledujte známky retence tekutin a periferní edémy.<br>
+• Sledujte závratě, synkopy, sedaci, zmatenost, poruchy chůze, pády, kognitivní pokles a celkové funkční zhoršení.<br>
+• Hodnoťte příznaky hyponatrémie (únava, zmatenost, křeče).<br>
+• Revidujte současnou medikaci z hlediska klinicky relevantních lékových interakcí, zejména přes CYP2D6.<br>
+• Zvažte genotypizaci a terapeutické monitorování léčiva (TDM), pokud je to klinicky vhodné.
+`
+  };
+
+  function toggleMonitoringBox() {
+    const cb = document.getElementById('monitoringCheckbox');
+    const box = document.getElementById('monitoringBox');
+    box.style.display = cb.checked ? 'block' : 'none';
+  }
+
+  function updateMonitoringUI() {
+    const selectedMed = document.getElementById('medication').value;
+    const wrapper = document.getElementById('monitoringWrapper');
+    const cb = document.getElementById('monitoringCheckbox');
+    const box = document.getElementById('monitoringBox');
+
+    if (!selectedMed || !monitoringTexts[selectedMed]) {
+      wrapper.style.display = 'none';
+      cb.checked = false;
+      box.style.display = 'none';
+      box.innerHTML = '';
+      renderRiskFactors(null);
+      return;
+    }
+
+    wrapper.style.display = 'block';
+    box.innerHTML = monitoringTexts[selectedMed];
+    renderRiskFactors(selectedMed);
+
+    if (!cb.checked) box.style.display = 'none';
+  }
+
+  /* ===== RISK-FACTOR TICK BOXES (6x) ===== */
+
+  const riskFactorMeta = [
+    { key: "severe_renal_impairment", label: "Pokročilá renální dysfunkce (CrCl ≤ 30 mL/min nebo závislost na dialýze)" },
+    { key: "severe_hepatic_impairment", label: "Pokročilá jaterní dysfunkce (Child–Pugh C / dekompenzované jaterní onemocnění)" },
+    { key: "high_bleeding_risk", label: "Zvýšené krvácivé riziko (současná antikoagulační/NSAID léčba nebo anamnéza závažného krvácení)" },
+    { key: "recurrent_falls", label: "Vysoké riziko pádů (≥2 pády během 12 měsíců nebo klinicky významná pádová predispozice)" },
+    { key: "anticholinergic_burden", label: "Vysoká anticholinergní zátěž (ACB skóre ≥3 a/nebo klinicky významné anticholinergní nežádoucí účinky)" },
+    { key: "orthostatic_hypotension_risk", label: "Klinicky významná ortostatická hypotenze (anamnéza synkopy/pádu nebo pokles TK ve stoje ≥30 mmHg)" }
+  ];
+
+  // Barvy podle Excelu:
+  // avoid = červená, caution = žlutá/oranžová, possible = zelená
+  // (theme:7 z Excelu bereme jako caution)
+  const riskMatrix = {
+    amitriptyline: {
+      severe_renal_impairment: "caution",
+      severe_hepatic_impairment: "avoid",
+      high_bleeding_risk: "caution",
+      recurrent_falls: "avoid",
+      anticholinergic_burden: "avoid",
+      orthostatic_hypotension_risk: "avoid"
+    },
+    duloxetine: {
+      severe_renal_impairment: "avoid",
+      severe_hepatic_impairment: "avoid",
+      high_bleeding_risk: "caution",
+      recurrent_falls: "caution",
+      anticholinergic_burden: "possible",
+      orthostatic_hypotension_risk: "caution"
+    },
+    venlafaxine: {
+      severe_renal_impairment: "caution",
+      severe_hepatic_impairment: "avoid",
+      high_bleeding_risk: "caution",
+      recurrent_falls: "caution",
+      anticholinergic_burden: "possible",
+      orthostatic_hypotension_risk: "caution"
+    },
+    carbamazepine: {
+      severe_renal_impairment: "caution",
+      severe_hepatic_impairment: "avoid",
+      high_bleeding_risk: "possible",
+      recurrent_falls: "caution",
+      anticholinergic_burden: "caution",
+      orthostatic_hypotension_risk: "caution"
+    },
+    gabapentin: {
+      severe_renal_impairment: "avoid",
+      severe_hepatic_impairment: "possible",
+      high_bleeding_risk: "possible",
+      recurrent_falls: "caution",
+      anticholinergic_burden: "possible",
+      orthostatic_hypotension_risk: "caution"
+    },
+    pregabalin: {
+      severe_renal_impairment: "avoid",
+      severe_hepatic_impairment: "possible",
+      high_bleeding_risk: "possible",
+      recurrent_falls: "caution",
+      anticholinergic_burden: "possible",
+      orthostatic_hypotension_risk: "caution"
+    }
+  };
+
+  function renderRiskFactors(selectedMed) {
+    const wrapper = document.getElementById("riskFactorsWrapper");
+    const grid = document.getElementById("riskFactorsGrid");
+
+    // když není lék nebo není v matici → schovat
+    if (!selectedMed || !riskMatrix[selectedMed]) {
+      wrapper.style.display = "none";
+      grid.innerHTML = "";
+      return;
+    }
+
+    wrapper.style.display = "block";
+    grid.innerHTML = "";
+
+    riskFactorMeta.forEach(f => {
+      const severity = riskMatrix[selectedMed][f.key] || "caution";
+
+      const row = document.createElement("label");
+      row.style.display = "flex";
+      row.style.alignItems = "center";
+      row.style.gap = "10px";
+      row.style.padding = "10px";
+      row.style.border = "1px solid #ccc";
+      row.style.borderRadius = "8px";
+      row.style.background = "#fff";
+      row.style.color = "#000";
+      row.style.cursor = "pointer";
+
+      const cb = document.createElement("input");
+      cb.type = "checkbox";
+
+      const text = document.createElement("span");
+      text.textContent = f.label;
+
+      cb.addEventListener("change", () => {
+        if (cb.checked) {
+          if (severity === "avoid") row.style.background = "#f65513";
+          else if (severity === "possible") row.style.background = "#70ad47";
+          else row.style.background = "#ffc000"; // caution
+        } else {
+          row.style.background = "#fff";
+        }
+      });
+
+      row.appendChild(cb);
+      row.appendChild(text);
+      grid.appendChild(row);
+    });
+  }
+
+  /* ===== MONITORING CODE KONČÍ ===== */
+  </script>
+</body>
+</html>
