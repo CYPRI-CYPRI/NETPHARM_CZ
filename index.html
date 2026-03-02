@@ -290,6 +290,15 @@ ID projektu CZ.02.01.01/00/22_008/0004607, spolufinancováno Evropskou unií.
   </div>
 
   <script>
+    const keyMap = {
+  "Amitriptylin": "amitriptyline",
+  "Duloxetin": "duloxetine",
+  "Venlafaxin": "venlafaxine",
+  "Gabapentin": "gabapentin",
+  "Pregabalin": "pregabalin",
+  "Karbamazepin": "carbamazepine"
+};
+    
     const drugOptions = {
       diabetic: [
         "Amitriptylin (EFNS, NICE, AAN, CPS)",
@@ -386,7 +395,8 @@ ID projektu CZ.02.01.01/00/22_008/0004607, spolufinancováno Evropskou unií.
         drugOptions[painType].forEach(drug => {
           const option = document.createElement('option');
           option.textContent = drug;
-          option.value = drug.split(' ')[0].toLowerCase();
+         const baseName = drug.split(' ')[0];
+option.value = keyMap[baseName] || baseName.toLowerCase();
           medicationSelect.appendChild(option);
         });
         medicationBox.style.display = 'block';
